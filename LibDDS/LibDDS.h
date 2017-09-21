@@ -9,9 +9,8 @@ enum DXGI_FORMAT;
 
 struct ConversionOptions
 {
-    const char* normalMapOptions;
-    bool optionTypelessFloat;
-    bool optionTypelessUnorm;
+    int width;
+    int height;
     DirectX::WICCodecs codec;
     DXGI_FORMAT format;
 };

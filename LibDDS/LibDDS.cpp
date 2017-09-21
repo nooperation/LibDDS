@@ -82,23 +82,7 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
 
     if (DirectX::IsTypeless(info.format))
     {
-        if (options.optionTypelessUnorm)
-        {
-            info.format = DirectX::MakeTypelessUNORM(info.format);
-        }
-        else if (options.optionTypelessFloat)
-        {
-            info.format = DirectX::MakeTypelessFLOAT(info.format);
-        }
-
-        if (DirectX::IsTypeless(info.format))
-        {
-            std::stringstream errorMessage;
-            errorMessage << "ERROR Image has a typeless format of: " << info.format << std::endl;
-            SetError(errorMessage.str());
-            return false;
-        }
-
+        info.format = DirectX::MakeTypelessFLOAT(info.format);
         image->OverrideFormat(info.format);
     }
 
@@ -163,102 +147,41 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
         image.swap(timage);
     }
 
-    // --- Convert -----------------------------------------------------------------
-
-    auto tformat = (options.format == DXGI_FORMAT_UNKNOWN) ? info.format : options.format;
-    switch (tformat)
+    // --- Resize ------------------------------------------------------------------
+    if (options.width != 0 && options.height != 0 && (info.width != options.width || info.height != options.height))
     {
-        case DXGI_FORMAT_R8G8_UNORM:
-            tformat = DXGI_FORMAT_R32G32B32_FLOAT;
-            break;
-    }
-
-    std::string normalMapOptions = std::string(options.normalMapOptions);
-    if (normalMapOptions.empty() == false)
-    {
-        auto normalMapFlags = 0;
-        if (normalMapOptions.find('l') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_CHANNEL_LUMINANCE;
-        }
-        else if (normalMapOptions.find('r') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_CHANNEL_RED;
-        }
-        else if (normalMapOptions.find('g') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_CHANNEL_GREEN;
-        }
-        else if (normalMapOptions.find('b') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_CHANNEL_BLUE;
-        }
-        else if (normalMapOptions.find('a') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_CHANNEL_ALPHA;
-        }
-        else
-        {
-            std::stringstream errorMessage;
-            errorMessage << "ERROR Invalid value specified for -nmap (" << normalMapOptions << "), missing l, r, g, b, or a" << std::endl;
-            SetError(errorMessage.str());
-            return false;
-        }
-
-        if (normalMapOptions.find('m') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_MIRROR;
-        }
-        else
-        {
-            if (normalMapOptions.find('u') != std::string::npos)
-            {
-                normalMapFlags |= DirectX::CNMAP_MIRROR_U;
-            }
-            if (normalMapOptions.find('v') != std::string::npos)
-            {
-                normalMapFlags |= DirectX::CNMAP_MIRROR_V;
-            }
-        }
-        if (normalMapOptions.find('i') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_INVERT_SIGN;
-        }
-        if (normalMapOptions.find('o') != std::string::npos)
-        {
-            normalMapFlags |= DirectX::CNMAP_COMPUTE_OCCLUSION;
-        }
-
         std::unique_ptr<DirectX::ScratchImage> timage(new (std::nothrow) DirectX::ScratchImage);
         if (!timage)
         {
             std::stringstream errorMessage;
-            errorMessage << "ERROR Failed to allocate memory for DirectX::ComputeNormalMap" << std::endl;
+            errorMessage << "ERROR Failed to allocate memory for resizing" << std::endl;
             SetError(errorMessage.str());
             return false;
         }
 
-        auto nmfmt = tformat;
-        if (DirectX::IsCompressed(tformat))
-        {
-            nmfmt = (normalMapFlags & DirectX::CNMAP_COMPUTE_OCCLUSION) ? DXGI_FORMAT_R32G32B32A32_FLOAT : DXGI_FORMAT_R32G32B32_FLOAT;
-        }
-
-        hr = DirectX::ComputeNormalMap(image->GetImages(), image->GetImageCount(), image->GetMetadata(), normalMapFlags, 1.0f, nmfmt, *timage);
+        hr = Resize(image->GetImages(), image->GetImageCount(), image->GetMetadata(), options.width, options.height, 0, *timage);
         if (FAILED(hr))
         {
             std::stringstream errorMessage;
-            errorMessage << "ERROR DirectX::ComputeNormalMap failed with code: " << std::hex << hr << std::endl;
+            errorMessage << "ERROR Failed to resize image to " << options.width << "x" << options.height << std::endl;
             SetError(errorMessage.str());
             return false;
         }
 
         auto& tinfo = timage->GetMetadata();
-        info.format = tinfo.format;
+
+        info.width = tinfo.width;
+        info.height = tinfo.height;
+        info.mipLevels = 1;
 
         image.swap(timage);
+        cimage.reset();
     }
-    else if (info.format != tformat && !DirectX::IsCompressed(tformat))
+
+    // --- Convert -----------------------------------------------------------------
+
+    auto tformat = (options.format == DXGI_FORMAT_UNKNOWN) ? info.format : options.format;
+    if (info.format != tformat && !DirectX::IsCompressed(tformat))
     {
         std::unique_ptr<DirectX::ScratchImage> timage(new (std::nothrow) DirectX::ScratchImage);
         if (!timage)
