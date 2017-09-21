@@ -51,10 +51,13 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
     auto hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     if (FAILED(hr))
     {
-        std::stringstream errorMessage;
-        errorMessage << "ERROR CoInitializeEx failed with code: " << std::hex << hr << std::endl;
-        SetError(errorMessage.str());
-        return false;
+        if (hr != RPC_E_CHANGED_MODE)
+        {
+            std::stringstream errorMessage;
+            errorMessage << "ERROR CoInitializeEx failed with code: " << std::hex << hr << std::endl;
+            SetError(errorMessage.str());
+            return false;
+        }
     }
 
     // Convert images
