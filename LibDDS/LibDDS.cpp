@@ -166,6 +166,12 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
     // --- Convert -----------------------------------------------------------------
 
     auto tformat = (options.format == DXGI_FORMAT_UNKNOWN) ? info.format : options.format;
+    switch (tformat)
+    {
+        case DXGI_FORMAT_R8G8_UNORM:
+            tformat = DXGI_FORMAT_R32G32B32_FLOAT;
+            break;
+    }
 
     std::string normalMapOptions = std::string(options.normalMapOptions);
     if (normalMapOptions.empty() == false)
