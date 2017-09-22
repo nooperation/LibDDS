@@ -108,7 +108,8 @@
       <MapExports>true</MapExports>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetDir)$(TargetName).dll "R:\csharp\TextureResourceUtils\TextureResourceUtils\bin\x64\Debug" /y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -143,7 +144,8 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(TargetDir)$(TargetName).dll "R:\csharp\TextureResourceUtils\TextureResourceUtils\bin\x64\Debug" /y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
