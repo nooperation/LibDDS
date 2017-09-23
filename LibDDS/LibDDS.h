@@ -9,9 +9,16 @@ enum DXGI_FORMAT;
 
 struct ConversionOptions
 {
-    int width;
-    int height;
+    std::size_t width;
+    std::size_t height;
     DirectX::WICCodecs codec;
+    DXGI_FORMAT format;
+};
+
+struct ImageProperties
+{
+    std::size_t width;
+    std::size_t height;
     DXGI_FORMAT format;
 };
 
@@ -19,12 +26,13 @@ extern "C"
 {
     DllExport bool ConvertDdsInMemory(
         _In_ const unsigned char *inDdsBytes,
-        std::size_t inDdsBytesSize,
-        _Out_ unsigned char **outBuff,
-        _Out_ std::size_t* outBuffSize,
-        ConversionOptions options
+        _In_ std::size_t inDdsBytesSize,
+        _In_ ConversionOptions options,
+        _Out_opt_ unsigned char **outBuff,
+        _Out_opt_ std::size_t *outBuffSize,
+        _Out_opt_ ImageProperties *outImageProperties
     );
 
     DllExport const char *GetError();
-    DllExport void FreeMemory(const unsigned char *data);
+    DllExport void FreeMemory(_In_ const unsigned char *data);
 }

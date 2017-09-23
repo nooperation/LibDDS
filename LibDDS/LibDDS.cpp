@@ -16,17 +16,21 @@
 #include <iomanip>
 #include <unordered_map>
 #include <sstream>
+#include <mutex>
 
 #include "LibDDS.h"
 
 #include "..\ThirdParty\DirectXTex\DirectXTex\DirectXTex.h"
 #include "Utils.h"
 
+std::mutex blobMapMutex;
 std::unordered_map<const void *, DirectX::Blob> blobMap;
 static thread_local std::string _errorMessage = "";
 
-void FreeMemory(const unsigned char *data)
+void FreeMemory(_In_ const unsigned char *data)
 {
+    std::lock_guard<std::mutex> lock(blobMapMutex);
+
     auto blobIter = blobMap.find(data);
     if (blobIter != blobMap.end())
     {
@@ -45,7 +49,13 @@ const char *GetError()
     return _errorMessage.c_str();
 }
 
-bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesSize, unsigned char **outBuff, std::size_t* outBuffSize, ConversionOptions options)
+bool ConvertDdsInMemory(
+    _In_ const unsigned char *inDdsBytes,
+    _In_ std::size_t inDdsBytesSize,
+    _In_ ConversionOptions options,
+    _Out_opt_ unsigned char **outBuff,
+    _Out_opt_ std::size_t* outBuffSize,
+    _Out_opt_ ImageProperties *outImageProperties)
 {
     // Initialize COM (needed for WIC)
     auto hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -62,6 +72,7 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
 
     // Convert images
     DirectX::TexMetadata info;
+    DirectX::TexMetadata originalInfo;
     auto image = std::unique_ptr<DirectX::ScratchImage>(new (std::nothrow) DirectX::ScratchImage);
     if (!image)
     {
@@ -79,6 +90,7 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
         SetError(errorMessage.str());
         return false;
     }
+    originalInfo = info;
 
     if (DirectX::IsTypeless(info.format))
     {
@@ -247,9 +259,33 @@ bool ConvertDdsInMemory(const unsigned char *inDdsBytes, std::size_t inDdsBytesS
         return false;
     }
 
-    *outBuff = reinterpret_cast<unsigned char *>(blob.GetBufferPointer());
-    *outBuffSize = blob.GetBufferSize();
-    blobMap[blob.GetBufferPointer()] = std::move(blob);
+    auto blobNeedsToBeReleased = true;
+
+    if (outBuff != nullptr)
+    {
+        *outBuff = reinterpret_cast<unsigned char *>(blob.GetBufferPointer());
+        blobNeedsToBeReleased = false;
+
+        std::lock_guard<std::mutex> lock(blobMapMutex);
+        blobMap[blob.GetBufferPointer()] = std::move(blob);
+    }
+
+    if (outImageProperties != nullptr)
+    {
+        outImageProperties->width = originalInfo.width;
+        outImageProperties->height = originalInfo.height;
+        outImageProperties->format = originalInfo.format;
+    }
+
+    if (outBuffSize != nullptr)
+    {
+         *outBuffSize = blob.GetBufferSize();
+    }
+
+    if (blobNeedsToBeReleased)
+    {
+        blob.Release();
+    }
 
     return true;
 }
