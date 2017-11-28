@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>SanTools.LibDDS</id>
+    <version>$version$</version>
+    <authors>NoOperation</authors>
+    <owners>NoOperation</owners>
+    <licenseUrl>https://github.com/nooperation/LibDDS/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/nooperation/LibDDS/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Basic in-memory DDS tools</description>
+    <copyright>Copyright 2017</copyright>
+    <tags>DDS SanTools native</tags>
+  </metadata>
+  <files>
+    <file src="build\**" target="build" />
+    <file src="x64\Release\LibDDS.dll" target="contentFiles\x64\LibDDS.dll" />
+  </files>
+</package>
