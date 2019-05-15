@@ -244,11 +244,12 @@ bool ConvertDdsInMemory(
     // --- Save result -------------------------------------------------------------
     auto blob = DirectX::Blob();
     auto img = image->GetImage(0, 0, 0);
+    auto wic_codec = GetWICCodec(options.codec);
     hr = DirectX::SaveToWICMemory(
         img,
         1,
         DirectX::WIC_FLAGS_NONE,
-        GetWICCodec(options.codec),
+        wic_codec,
         blob
     );
     if (FAILED(hr))
@@ -260,6 +261,11 @@ bool ConvertDdsInMemory(
     }
 
     auto blobNeedsToBeReleased = true;
+
+    if (outBuffSize != nullptr)
+    {
+        *outBuffSize = blob.GetBufferSize();
+    }
 
     if (outBuff != nullptr)
     {
@@ -275,11 +281,6 @@ bool ConvertDdsInMemory(
         outImageProperties->width = originalInfo.width;
         outImageProperties->height = originalInfo.height;
         outImageProperties->format = originalInfo.format;
-    }
-
-    if (outBuffSize != nullptr)
-    {
-         *outBuffSize = blob.GetBufferSize();
     }
 
     if (blobNeedsToBeReleased)
